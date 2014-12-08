@@ -3,6 +3,8 @@ package ocbc;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.security.NoSuchAlgorithmException;
+import java.util.Date;
+import java.util.Random;
 import java.util.TreeSet;
 
 import ocbc.strategy.RandomStrategy;
@@ -18,110 +20,47 @@ import de.uniba.wiai.lspi.util.logging.Logger;
 
 public class BattleshipClient implements NotifyCallback {
 	
-	static {
-		PropertiesLoader.loadPropertyFile();
-		Strategy.register("random", new RandomStrategy());
-	}
-	
 	private static final Logger logger = Logger.getLogger(BattleshipClient.class);
 	
-	private ChordImpl chord;
-	private Strategy strategy;
-	private MyShips ships;
+	ChordImpl chord;
+	Strategy strategy;
+	MyShips ships;
 	
-	public static void main(String[] args) throws MalformedURLException, ServiceException, NoSuchAlgorithmException {
-		BattleshipClient ocbc;
+	private Integer s, i;
+	
+	public BattleshipClient(String localUrl, String bootstrapUrl, Integer i, Integer s, String strategy) throws MalformedURLException, ServiceException {
+		this.strategy = Strategy.getInstance(strategy);
+		this.i = i;
+		this.s = s;
 		
-		if(args.length>1) {
-			ocbc = new BattleshipClient(args[0], args[1]);
-			handleInput(ocbc);
-			ocbc.chord.leave();
-			
-		} else if(args.length>0) {
-			ocbc = new BattleshipClient(args[0]);
-			handleInput(ocbc);
-			ocbc.chord.leave();
-			
-		} else {
-			System.out.println("Usage: BattleshipClient localUrl {bootstrapUrl}");
-		}
-	}
-	
-	public static void handleInput(BattleshipClient c) throws NoSuchAlgorithmException {
-		int key = 0;
-		while(key!='q') {
-			try {
-				key = System.in.read();
-				switch (key) {
-					case 'f':
-						System.out.println("Finger table:");
-						for(Node node : c.chord.getFixedFingerTable()) {
-							System.out.println("  " + node);
-						}
-						break;
-						
-					case 'r':
-						if(c.strategy==null) c.init();
-						ID rndid = IDUtil.rnd();
-						System.out.println("Retrieving " + rndid + " ...");
-						c.chord.retrieve(c.strategy.next());
-						break;
-						
-					case 'x':
-						ID maxid = IDUtil.max();
-						System.out.println("Retrieving " + maxid + " ...");
-						c.chord.retrieve(maxid);
-						break;
-						
-					case 'n':
-						ID minid = IDUtil.min();
-						System.out.println("Retrieving " + minid + " ...");
-						c.chord.retrieve(minid);
-						break;
-						
-					case 'p':
-						System.out.println("Predecessor: " + c.chord.getPredecessorID());
-						break;
-						
-					case 'i':
-						c.init();
-						break;
-	
-					default:
-						break;
-				}
-			} catch (IOException e) {
-				System.err.println(e.getMessage());
-			}
-		}
-	}
-	
-	public BattleshipClient(String localUrl) throws MalformedURLException, ServiceException {
-		this(localUrl, null);
-	}
-	
-	public BattleshipClient(String localUrl, String bootstrapUrl) throws MalformedURLException, ServiceException {
 		chord = new ChordImpl();
 		chord.setCallback(this);
 		
+		URL local = new URL(localUrl);
+		if("ocrmi".equals(local.getProtocol()) && local.getPort()==1) {
+			local = new URL("ocrmi://" + local.getHost() + ":" + (new Random(System.currentTimeMillis()).nextInt(60000)+4243) + "/");
+		}
+		
 		if(bootstrapUrl==null) {
-			chord.create(new URL(localUrl));
+			chord.create(local);
 			logger.info(chord + " created");
 		} else {
-			chord.join(new URL(localUrl), new URL(bootstrapUrl));
+			chord.join(local, new URL(bootstrapUrl));
 			logger.info(chord + " joined, " + " predecessor=" + chord.getPredecessorID());
 		}
 	}
 	
+	/**
+	 * To be called, after nodes have joined
+	 */
 	public void init() {
-		strategy = Strategy.getInstance("random");
-		strategy.init(chord.getID(), chord.getPredecessorID(), IDUtil.ids(chord.getFingerTable()), 10, 5);
-		ships = new MyShips(chord.getID(), chord.getPredecessorID(), 10, 5);
+		strategy.init(chord.getID(), chord.getPredecessorID(), IDUtil.ids(chord.getFingerTable()), i, s);
+		ships = new MyShips(chord.getID(), chord.getPredecessorID(), i, s);
 	}
 
 	@Override
 	public void retrieved(ID target) {
-		if(strategy==null) init();
+		if(ships==null) init();
 		logger.info(chord + " retrieved: " + target.toString());
 		chord.broadcast(target, ships.shoot(target));
 		chord.retrieve(strategy.next());
@@ -129,11 +68,14 @@ public class BattleshipClient implements NotifyCallback {
 
 	@Override
 	public void broadcast(ID source, ID target, Boolean hit) {
-		if(strategy==null) init();
+		if(ships==null) init();
 		logger.info(chord + " broadcast from " + source + ": " + target.toString() + " " + hit);
 		if(strategy.inform(source, target, hit)) {
-			logger.error("Sunk " + source);
+			logger.info("Sunk " + source);
+			System.out.println("Finished: " + new Date());
+			System.out.println(source);
 			chord.leave();
+			System.exit(0);
 		}
 	}
 
