@@ -957,6 +957,14 @@ public final class ChordImpl implements Chord, Report, AsynChord {
 								+ "successor; return reference on me: "
 								+ this.getID());
 			}
+			
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
 			return this.localNode;
 		}
 		// check if the key to look up lies between this node and its successor

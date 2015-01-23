@@ -37,8 +37,9 @@ public class BattleshipClient implements NotifyCallback {
 		chord.setCallback(this);
 		
 		URL local = new URL(localUrl);
-		if("ocrmi".equals(local.getProtocol()) && local.getPort()==1) {
-			local = new URL("ocrmi://" + local.getHost() + ":" + (new Random(System.currentTimeMillis()).nextInt(60000)+4243) + "/");
+		String protocol = local.getProtocol();
+		if(("ocrmi".equals(protocol) || "ocsocket".equals(protocol)) && local.getPort()==1) {
+			local = new URL(protocol + "://" + local.getHost() + ":" + (new Random(System.currentTimeMillis()).nextInt(60000)+4243) + "/");
 		}
 		
 		if(bootstrapUrl==null) {

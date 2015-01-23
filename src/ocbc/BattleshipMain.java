@@ -6,6 +6,7 @@ import java.security.NoSuchAlgorithmException;
 
 import ocbc.strategy.RandomStrategy;
 import ocbc.strategy.Strategy;
+import ocbc.strategy.WinStrategy;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -34,6 +35,7 @@ public class BattleshipMain {
 		PropertiesLoader.loadPropertyFile();
 		
 		Strategy.register("random", new RandomStrategy());
+		Strategy.register("win",    new WinStrategy());
 		
 		CommandLineParser parser = new PosixParser();
 		
@@ -60,6 +62,7 @@ public class BattleshipMain {
 		if(cmd.hasOption(OPT_WITH_CLI)) {
 			handleInput(bc);
 		}
+		
 	}
 	
 	public static void handleInput(BattleshipClient c) throws NoSuchAlgorithmException {

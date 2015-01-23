@@ -54,6 +54,14 @@ public class IDUtil {
 		return ids;
 	}
 	
+	public static boolean inRange(ID from, ID to, ID target){
+		if(to.compareTo(from)>0) {
+			return (to.compareTo(target) >= 0 && target.compareTo(from) >= 0);
+		} else {
+			return (from.compareTo(target) <= 0 && target.compareTo(to) >= 0) || (target.compareTo(to) <= 0);
+		}
+	}
+	
 	public static BigInteger range(ID from, ID to) {
 		BigInteger range;
 		if(to.compareTo(from)>0) {
@@ -62,6 +70,34 @@ public class IDUtil {
 			range = IDUtil.max().toBigInteger().subtract(from.toBigInteger()).add(to.toBigInteger());
 		}
 		return range;
+	}
+	
+	public static ID getIntervallID(ID from, ID to, int index){
+		return ID.valueOf(range(from, to).divide(BigInteger.valueOf(100)).multiply(BigInteger.valueOf(index)));
+	}
+	
+	public static int getIndex(ID from, ID to, ID target){
+		
+		BigInteger range = range(from,to);
+		BigInteger shot;
+		BigInteger index;
+		
+		if(to.compareTo(from)>0) {
+			shot = target.toBigInteger().subtract(from.toBigInteger());
+		} else {
+			if(to.compareTo(target)<0){
+				shot = target.toBigInteger().subtract(from.toBigInteger());
+			}else{
+				shot = IDUtil.max().toBigInteger().subtract(from.toBigInteger()).add(target.toBigInteger());
+			}
+		}
+		
+		index = BigInteger.valueOf(100).multiply(shot).divide(range);
+		
+		if(index.intValue() - 1 < 0 )
+		{ return 0; } 
+		
+		return index.intValue() - 1;
 	}
 
 }
